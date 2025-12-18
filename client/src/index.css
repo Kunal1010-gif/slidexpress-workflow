@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+/* Email content styling */
+.email-content {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.email-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.5rem 0;
+}
+
+.email-content p {
+  margin: 0.5rem 0;
+}
+
+.email-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.email-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.email-content table td,
+.email-content table th {
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.email-content blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: #6b7280;
+}
+
+.email-content ul,
+.email-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.email-content h1,
+.email-content h2,
+.email-content h3,
+.email-content h4,
+.email-content h5,
+.email-content h6 {
+  margin: 0.75rem 0 0.5rem 0;
+  font-weight: 600;
+}

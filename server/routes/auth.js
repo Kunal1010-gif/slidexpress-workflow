@@ -1,0 +1,111 @@
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const OTP = require('../models/OTP');
+const { sendOTPEmail } = require('../utils/email');
+const { authenticate } = require('../middleware/auth');
+
+// Login route
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email }).populate('workspace').populate('teamLead', 'name email role');
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(403).json({ message: 'Your account has been deactivated' });
+    }
+
+    // Verify password
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if first login
+    if (user.isFirstLogin) {
+      // Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Save OTP to database
+      await OTP.create({
+        email: user.email,
+        otp: otp,
+        purpose: 'first_login'
+      });
+
+      // Send OTP email
+      const emailResult = await sendOTPEmail(user.email, otp, 'first_login');
+
+      if (!emailResult.success) {
+        return res.status(500).json({
+          message: 'Failed to send OTP email. Please verify email credentials on the server.',
+          error: emailResult.error
+        });
+      }
+
+      return res.json({
+        isFirstLogin: true,
+        message: 'First time login. OTP sent to your email. Please reset your password.',
+        email: user.email
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        workspace: user.workspace,
+        teamLead: user.teamLead,
+        isFirstLogin: false
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get current user info
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    res.json({
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        workspace: req.user.workspace,
+        teamLead: req.user.teamLead,
+        isFirstLogin: req.user.isFirstLogin
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+module.exports = router;
